@@ -8,11 +8,17 @@ Buzet: Lupoglav,15 Motovun,18
 Grožnjan: Buje,8 Motovun,15 Višnjan,19
 Kanfanar: Baderna,19 Rovinj,18 Žminj,6 Vodnjan,29
 Labin: Barban,15 Lupoglav,42
-Lupoglav: Labin,42 Opatija,29 Pazin,23 Buzet,15
+###########################################################
+############### Lupoglav-Pazin je 22, ne 23 ###############
+###########################################################
+Lupoglav: Labin,42 Opatija,29 Pazin,22 Buzet,15
 Medulin: Pula,9
 Motovun: Buzet,18 Grožnjan,15 Pazin,20
 Opatija: Lupoglav,29
-Pazin: Baderna,19 Motovun,20 Žminj,17 Lupoglav,23
+###########################################################
+############### Lupoglav-Pazin je 22, ne 23 ###############
+###########################################################
+Pazin: Baderna,19 Motovun,20 Žminj,17 Lupoglav,22
 Poreč: Baderna,14
 Pula: Vodnjan,12 Barban,28 Medulin,9
 Rovinj: Kanfanar,18
