@@ -3,7 +3,7 @@ from algorithms.astar import *
 from algorithms.bfs import *
 from algorithms.hcheck import check_heuristic_admissibility, check_heuristic_consistency
 from algorithms.ucs import *
-from data_loader import DataLoader
+from data_loader import *
 
 
 # TODO note that all the functionality written is under the hypothesis that there will be no double edges between
@@ -11,32 +11,31 @@ from data_loader import DataLoader
 #  given to start with) in the input file
 
 def run(path_to_state_space_definition, path_to_heuristic_definition):
-    # Load state space and the heuristic function
-    number_of_states, start_state, goal_states, successor, predecessor, goal, number_of_transitions = DataLoader.laod_state_space(
-        path_to_state_space_definition)
-    h = DataLoader.load_heuristic(path_to_heuristic_definition)
+    # Load state space and the heuristic
+    ss = StateSpace(path_to_state_space_definition)
+    h = HeuristicLoader(path_to_heuristic_definition)
 
-    print("Loaded {} states with {} transitions".format(number_of_states, number_of_transitions))
-    print("Start state is: {}".format(start_state))
-    print("Goal states are: {}".format(goal_states))
+    print("Loaded {} states with {} transitions".format(ss.get_number_of_states(), ss.get_number_of_transitions()))
+    print("Start state is: {}".format(ss.get_start_state()))
+    print("Goal states are: {}".format(ss.get_goal_states()))
     print()
 
     print('----> BFS')
-    breadthFirstSearch(start_state, successor, goal)
+    breadthFirstSearch(ss.get_start_state(), ss.successor, ss.is_goal_state)
 
     print('----> UCS')
-    uniform_cost_search(start_state, successor, goal)
+    uniform_cost_search(ss.get_start_state(), ss.successor, ss.is_goal_state)
 
     print('----> A*')
-    a_star(start_state, successor, goal, h)
+    a_star(ss.get_start_state(), ss.successor, ss.is_goal_state, h.predict)
 
     print("----> Was the used heuristic optimistic?")
-    check_heuristic_admissibility(goal_states, predecessor, h)
+    check_heuristic_admissibility(ss.get_goal_states(), ss.predecessor, h.predict)
 
     print("----> Was the used heuristic consistent?")
-    check_heuristic_consistency(goal_states, successor, predecessor, h)
+    check_heuristic_consistency(ss.get_goal_states(), ss.successor, ss.predecessor, h.predict)
 
-    print("\n\n\n\n\n")
+    print("\n\n\n")
 
 
 if __name__ == '__main__':
