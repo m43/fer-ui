@@ -1,4 +1,5 @@
 import time
+from heapq import *
 
 from sortedcontainers import SortedList
 
@@ -6,27 +7,25 @@ from sortedcontainers import SortedList
 def check_heuristic_admissibility(goal_states, predecessor, h):
     timestamp = time.time()
 
-    # dijkstra to determine h*
     closed_front_dict = {}  # state --> total cost aka h*
+    open_front = []
+    for s in goal_states:
+        heappush(open_front, (0, (s, 0)))
 
-    open_front = SortedList(key=lambda x: -x[1])  # stores tuples: (state, total cost of getting to this node aka h*)
-    open_front.update([(s, 0) for s in goal_states])
-
-    while len(open_front) != 0:
-        x = open_front.pop()
-        # if closed_front_dict.get(x[0], x[1] + 1) < x[1]:
-        #     continue
+    while open_front:
+        x = heappop(open_front)[1]
         if x[0] in closed_front_dict:
             continue
 
         closed_front_dict[x[0]] = x[1]
-        open_front.update([(s, x[1] + c) for (s, c) in predecessor(x[0])
-                           if s not in closed_front_dict or closed_front_dict[s] > x[1] + c])
+        for (s, c) in predecessor(x[0]):
+            if s not in closed_front_dict or closed_front_dict[s] > x[1] + c:
+                heappush(open_front, ((x[1] + c), (s, x[1] + c)))
 
     # as h* is determined and saved in closed_front_dict, the check can be made
     contradiction_count = 0
     output = ""
-    for (state, total_cost) in sorted(closed_front_dict.items(), key=lambda item: item[1]):
+    for (state, total_cost) in closed_front_dict.items():
         if total_cost < h(state):
             contradiction_count += 1
             if contradiction_count <= 50:
