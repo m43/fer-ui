@@ -6,7 +6,7 @@ from node import Node
 
 def a_star(s0, succ, goal, h):
     f = lambda node: node.cost + h(node.state)
-    open_front = SortedList(key=lambda node: (-f(node), -h(node.state), +node.depth))
+    open_front = SortedList(key=lambda node: (-f(node), node.cost, +node.depth)) # TODO optimisation could be done on
     open_front_dict = {}  # will map state->Node
     closed_front_dict = {}  # will map state->Node. necessary for non-consistent heuristics
 

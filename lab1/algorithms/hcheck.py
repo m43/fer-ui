@@ -1,8 +1,6 @@
 import time
 from heapq import *
 
-from sortedcontainers import SortedList
-
 
 def check_heuristic_admissibility(goal_states, predecessor, h):
     timestamp = time.time()
@@ -26,12 +24,14 @@ def check_heuristic_admissibility(goal_states, predecessor, h):
     contradiction_count = 0
     output = ""
     for (state, total_cost) in closed_front_dict.items():
-        if total_cost < h(state):
+        h_state = h(state)
+        if total_cost < h_state:
             contradiction_count += 1
             if contradiction_count <= 50:
-                output += "[ERR] h({}) > h*({}): {} > {}\n".format(state, state, h(state), total_cost)
+                output += "[ERR] h({}) > h*({}): {} > {}\n".format(state, state, h_state, total_cost)
 
-    print("Delta t:", time.time() - timestamp, "seconds")
+    delta_t = time.time() - timestamp
+    print("Delta t:", delta_t, "seconds")
 
     if contradiction_count > 0:
         if contradiction_count > 50:
@@ -43,44 +43,73 @@ def check_heuristic_admissibility(goal_states, predecessor, h):
     else:
         print("Heuristic is optimistic for all states that could be visited from the goal state.")
 
-    print()
+    return delta_t, contradiction_count
 
 
-def check_heuristic_consistency(goal_states, successor, predecessor, h):
+def check_heuristic_consistency(start_state, goal_states, successor, h):
     timestamp = time.time()
 
-    # dijkstra to make a tree from the goal state, following the monotonic growth of h*
-    closed_front_dict = {}  # state --> total cost aka h*
+    closed_front = set()
 
-    open_front = SortedList(key=lambda x: -x[1])  # stores tuples: (state, total cost of getting to this node aka h*)
-    open_front.update([(s, 0) for s in goal_states])
+    open_front = set()
+    open_front.add(start_state)
+    open_front.update([s for s in goal_states])
 
     contradiction_count = 0
     output = ""
-    while len(open_front) != 0:
+    while open_front:
         x = open_front.pop()
-        if x[0] in closed_front_dict:
-            continue
+        closed_front.add(x)
+        for (y, c) in successor(x):
+            if y not in closed_front:
+                open_front.add(y)
 
-        closed_front_dict[x[0]] = x[1]
-        for (s, c) in predecessor(x[0]):
-            if s not in closed_front_dict or closed_front_dict[s] > x[1] + c:
-                open_front.add((s, x[1] + c))
-        for (s, c) in successor(x[0]):
-            if not h(s) >= h(x[0]) - c:
+            h_from = h(x)
+            h_to = h(y)
+            if not h_to >= h_from - c:
                 contradiction_count += 1
                 if contradiction_count <= 50:
-                    output += "[ERR] h({}) < h({}) - c: {} < {} - {}\r\n".format(s, x[0], h(s), h(x[0]), c)
+                    output += "[ERR] h({}) < h({}) - c: {} < {} - {}\r\n".format(h_to, h_from, h_to, h_from, c)
 
-    print("Delta t:", time.time() - timestamp, "seconds")
+    delta_t = time.time() - timestamp
+    print("Delta t:", delta_t, "seconds")
 
-    if contradiction_count == 0:
+    if contradiction_count > 0:
         if contradiction_count > 50:
             print("As there are many errors, printing will be omitted. Consider the contradiction aka error count.")
         else:
             print(output)
-        print("Heuristic is consistent")
-    else:
         print("Heuristic is not consistent. Found {} contradictions".format(contradiction_count))
+    else:
+        print("Heuristic is consistent")
 
-    print()
+    return delta_t, contradiction_count
+
+
+def check_heuristic_consistency_with_known_states(states, successor, h):
+    timestamp = time.time()
+
+    contradiction_count = 0
+    output = ""
+    for state in states:
+        for (successor_state, cost) in successor(state):
+            h_from = h(state)
+            h_to = h(successor_state)
+            if not h_to >= h_from - cost:
+                contradiction_count += 1
+                if contradiction_count <= 50:
+                    output += "[ERR] h({}) < h({}) - c: {} < {} - {}\r\n".format(h_to, h_from, h_to, h_from, cost)
+
+    delta_t = time.time() - timestamp
+    print('Delta t:', delta_t, "seconds")
+
+    if contradiction_count > 0:
+        if contradiction_count > 50:
+            print("As there are many errors, printing will be omitted. Consider the contradiction aka error count.")
+        else:
+            print(output)
+        print("Heuristic is not consistent. Found {} contradictions".format(contradiction_count))
+    else:
+        print("Heuristic is consistent")
+
+    return delta_t, contradiction_count

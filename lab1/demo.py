@@ -1,7 +1,7 @@
 import parameters
 from algorithms.astar import *
 from algorithms.bfs import *
-from algorithms.hcheck import check_heuristic_admissibility, check_heuristic_consistency
+from algorithms.hcheck import *
 from algorithms.ucs import *
 from data_loader import *
 
@@ -33,9 +33,11 @@ def run(path_to_state_space_definition, path_to_heuristic_definition):
     check_heuristic_admissibility(ss.get_goal_states(), ss.predecessor, h.predict)
 
     print("----> Was the used heuristic consistent?")
-    check_heuristic_consistency(ss.get_goal_states(), ss.successor, ss.predecessor, h.predict)
+    check_heuristic_consistency(ss.get_start_state(), ss.get_goal_states(), ss.successor, h.predict)
+    print("----> Was the used heuristic consistent? (Faster check with all states given)")
+    check_heuristic_consistency_with_known_states(ss.get_states(), ss.successor, h.predict)
 
-    print("\n\n\n")
+    # print("\n\n\n")
 
 
 if __name__ == '__main__':

@@ -63,13 +63,136 @@ class StateSpace:
         return len(self._states)
 
     def predecessor(self, state):
-        return self._transitions_into_state[state] if state in self._transitions_into_state else []
+        return self._transitions_into_state.get(state, [])
 
     def successor(self, state):
-        return self._transitions_from_state[state] if state in self._transitions_from_state else []
+        return self._transitions_from_state.get(state, [])
 
     def is_goal_state(self, state):
         return state in self._goal_states
+
+
+class PuzzleStateSpace:
+    def __init__(self, start_state, goal_state):
+        assert len(start_state) == 11
+        assert len(goal_state) == 11
+
+        self._start_state = start_state
+        self._goal_state = goal_state
+
+        self._goal_state_position_of_tiles, _ = PuzzleStateSpace._parse_state(goal_state)
+
+    def get_start_state(self):
+        return self._start_state
+
+    def get_goal_state(self):
+        return self._goal_state
+
+    def is_goal_state(self, state):
+        return state == self._goal_state
+
+    @staticmethod
+    def _parse_state(state):
+        """
+
+        Help function to parse a string state that represents puzzle states into the returned tuple of two arrays.
+
+        First array represents the position of tiles in the state. It's an array of 9 numbers, each representing the
+        positions of tiles. Index i in the array corresponds with the position of tile i, while index 0 corresponds with
+        the position of the empty element.
+
+        For example, that array would for the state 321_456_#78 look like this: [7, 3,2,1, 4,5,6, 8,9].
+
+        The second array repesents tiles at position. For example 321_456_#78 would turn into [3,2,1, 4,5,6, #,7,8].
+
+        The arrays are parsed all at once in this method in order to increase performance.
+        # TODO  although, I think that splitting this would not decrease the performance very much, as it would increase
+                readability...
+
+        :param state: the state, like 321_456_#78
+        :return: a tuple of two arrays, first telling the position of tiles and the second array is the other way around
+        """
+
+        position_of_tiles = [-1] * 9
+        tiles_at_position = []
+        position_counter = 1
+        for c in state:
+            if c == '_':
+                continue
+            elif c == 'x':
+                position_of_tiles[0] = position_counter
+                tiles_at_position.append("x")
+            else:
+                tile = int(c)
+                position_of_tiles[tile] = position_counter
+                tiles_at_position.append(tile)
+            position_counter += 1
+
+        return position_of_tiles, tiles_at_position
+
+    @staticmethod
+    def _construct_solution_with_swap(positions_array, swap_i, swap_j):
+        temp = positions_array[swap_i - 1]
+        positions_array[swap_i - 1] = positions_array[swap_j - 1]
+        positions_array[swap_j - 1] = temp
+
+        result = "{}{}{}_{}{}{}_{}{}{}".format(*positions_array)
+
+        temp = positions_array[swap_i - 1]
+        positions_array[swap_i - 1] = positions_array[swap_j - 1]
+        positions_array[swap_j - 1] = temp
+
+        return result, 1
+
+    def predecessor(self, state):
+        return self.successor(state)
+
+    def successor(self, state):
+        result = []
+
+        tiles, slots = self._parse_state(state)
+
+        empty_element_position = tiles[0]
+
+        if (empty_element_position - 1) % 3 != 0:
+            result.append(self._construct_solution_with_swap(slots, empty_element_position, empty_element_position - 1))
+        if (empty_element_position - 1) % 3 != 2:
+            result.append(self._construct_solution_with_swap(slots, empty_element_position, empty_element_position + 1))
+        if 9 >= (empty_element_position - 3) >= 1:
+            result.append(self._construct_solution_with_swap(slots, empty_element_position, empty_element_position - 3))
+        if 9 >= (empty_element_position + 3) >= 1:
+            result.append(self._construct_solution_with_swap(slots, empty_element_position, empty_element_position + 3))
+
+        return result
+
+    @staticmethod
+    def pretty_print_state_string(state):
+        return "\t{} {} {}\n\t{} {} {}\n\t{} {} {}\n".format(*(PuzzleStateSpace._parse_state(state)[1]))
+
+    @staticmethod
+    def pretty_print_state(state):
+        print(PuzzleStateSpace.pretty_print_state_string(state))
+
+    def heuristic_l0(self, state):
+        tiles, _ = PuzzleStateSpace._parse_state(state)
+
+        l1_sum = 0
+        for tile_i in range(1, 9):
+            l1_sum += not tiles[tile_i] == self._goal_state_position_of_tiles[tile_i]
+
+        return l1_sum
+
+    def heuristic_l1(self, state):
+        tiles, _ = PuzzleStateSpace._parse_state(state)
+
+        l1_sum = 0
+        for tile_i in range(1, 9):
+            given = tiles[tile_i] - 1
+            goal = self._goal_state_position_of_tiles[tile_i] - 1
+
+            l1_sum += abs(given % 3 - goal % 3) + abs(given // 3 - goal // 3)
+
+        return l1_sum
 
 
 class HeuristicLoader:
@@ -88,4 +211,9 @@ class HeuristicLoader:
                 self._heuristic[state] = float(prediction.strip())
 
     def predict(self, state):
-        return self._heuristic[state] if state in self._heuristic else 0
+        return self._heuristic.get(state, 0)
+
+
+if __name__ == '__main__':
+    a = ""
+    print("==>", a)
