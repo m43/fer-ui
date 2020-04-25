@@ -212,8 +212,3 @@ class HeuristicLoader:
 
     def predict(self, state):
         return self._heuristic.get(state, 0)
-
-
-if __name__ == '__main__':
-    a = ""
-    print("==>", a)
