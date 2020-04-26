@@ -2,6 +2,7 @@ from typing import Set, List
 
 
 class Clause:
+
     @staticmethod
     def parse_to_clauses(string: str) -> List:
         return [frozenset([x.strip() for x in string.lower().split(" v ")])]
@@ -68,3 +69,42 @@ class Clause:
     @staticmethod
     def clause_to_string(clause: Set) -> str:
         return " v ".join(clause)
+
+    @staticmethod
+    def simplify_within_set_for_subsets(clauses_set) -> None:
+        for clause in list(clauses_set):
+            to_remove = set()
+            if clause in clauses_set:
+                for other in clauses_set:
+                    if other != clause and clause.issubset(other):
+                        to_remove.add(other)
+            clauses_set -= to_remove
+
+    @staticmethod
+    def simplify_among_two_sets_for_subsets(clauses_set_1, clauses_set_2) -> None:
+        """
+        Simplifies the given two sets among each other, looking if one has a clause that is a subset of the other.
+        Subsets will then get removed. Given sets must be simplified within themselves, otherwise the function will not
+        work properly.
+
+        :param clauses_set_1: first set of clauses
+        :param clauses_set_2: second set of clauses
+        """
+        to_remove = set()
+        for clause in clauses_set_1:
+            if Clause.simplify_sets_by_clause_for_subsets(clause, clauses_set_2):
+                to_remove.add(clause)
+
+    @staticmethod
+    def simplify_sets_by_clause_for_subsets(clause, *old_clauses_sets) -> bool:
+        for clauses in old_clauses_sets:
+            to_remove = set()
+            for existing_clause in clauses:
+                if existing_clause != clause:
+                    if existing_clause.issubset(clause):
+                        return True
+                    elif clause.issubset(existing_clause):
+                        to_remove.add(existing_clause)
+                        # print("#Subsumption:", Clause.clause_to_string(existing_clause), "subsummed by",
+                        #       Clause.clause_to_string(clause))
+            clauses -= to_remove

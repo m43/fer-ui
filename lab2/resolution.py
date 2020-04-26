@@ -5,6 +5,8 @@ from clause import Clause
 class Resolution:
     horizontal_line = "=" * 13 + "\n"
 
+    clause_counter = 0
+
     @staticmethod
     def check_deduction(facts, goal_clause, debug: bool = False) -> (str, str):
         output = ""
@@ -39,7 +41,7 @@ class Resolution:
     @staticmethod
     def _refute_by_resolution(facts, goal) -> (bool, str):
         steps = ""
-        clause_counter = 1
+        Resolution.clause_counter = 1
         clause_to_number = {}
 
         goal_negated = Clause.cnf_negated(goal)
@@ -51,9 +53,9 @@ class Resolution:
                 steps += Resolution.horizontal_line
                 continue
             if clause not in clause_to_number:
-                steps += "{}. {}\n".format(clause_counter, Clause.clause_to_string(clause))
-                clause_to_number[clause] = clause_counter
-                clause_counter += 1
+                steps += "{}. {}\n".format(Resolution.clause_counter, Clause.clause_to_string(clause))
+                clause_to_number[clause] = Resolution.clause_counter
+                Resolution.clause_counter += 1
         steps += Resolution.horizontal_line
 
         sos = set()
@@ -61,47 +63,76 @@ class Resolution:
         sos_stage.update(goal_negated)
         sos_new = set()
 
-        # TODO initial redundancy check (tautology check done, but not redundancy)
+        Clause.simplify_within_set_for_subsets(clauses)
+        Clause.simplify_within_set_for_subsets(sos_stage)
+        Clause.simplify_among_two_sets_for_subsets(sos_stage, clauses)
 
         while True:
+            # # I'm sorry for this for loop. TODO refactor later
+            # for (c1, c2) in itertools.product(sos_stage, sos_stage):
+            #     x, steps = Resolution.__help_fun(c1, c2, sos_new, sos_stage, clauses, clause_to_number, steps)
+            #     if x:
+            #         return [x, steps]
+            # if sos_new:
+            #     sos_stage.update(sos_new)
+            #     sos_new = set()
+            #     continue
+            #
+            # for (c1, c2) in itertools.product(sos_stage, sos):
+            #     x, steps = Resolution.__help_fun(c1, c2, sos_new, sos_stage, clauses, clause_to_number, steps)
+            #     if x:
+            #         return [x, steps]
+            # if sos_new:
+            #     sos_stage.update(sos_new)
+            #     sos_new = set()
+            #     continue
+            #
+            # for (c1, c2) in itertools.product(sos_stage, clauses):
+            #     x, steps = Resolution.__help_fun(c1, c2, sos_new, sos_stage, clauses, clause_to_number, steps)
+            #     if x:
+            #         return [x, steps]
+            # if not sos_new:
+            #     if not clauses:
+            #         return tuple([False, steps])
+            #     else:
+            #         clauses, sos_new = set(), clauses
+            # sos.update(sos_stage)
+            # sos_stage, sos_new = sos_new, set()
+
             for (c1, c2) in itertools.chain(
                     itertools.product(sos_stage, sos_stage),
                     itertools.product(sos_stage, sos),
                     itertools.product(sos_stage, clauses)):
-                if c1 == c2:
-                    continue
-                for resolvent in Clause.pl_resolve(c1, c2):
-                    if resolvent and Clause.cnf_tautology(resolvent):
-                        continue
-                    # is_current_resolvent_a_subset = False
-                    # for existing_clause in itertools.chain(sos, clauses, sos_new):
-                    #     if resolvent.issubset(existing_clause):
-                    #         is_current_resolvent_a_subset = True
-                    #         break
-                    #     elif existing_clause.issubset(resolvent):
-                    #         if existing_clause in sos:
-                    #             sos.remove(existing_clause)
-                    #         elif existing_clause in clauses:
-                    #             clauses.remove(existing_clause)
-                    #         else:
-                    #             sos_new.remove(existing_clause)
-                    # if is_current_resolvent_a_subset:
-                    #     break
-                    if resolvent not in clause_to_number:
-                        n1 = clause_to_number[c1]
-                        n2 = clause_to_number[c2]
-                        n1, n2 = (n2, n1) if (n1 > n2) else (n1, n2)
-                        steps += "{}. {} ({}, {})\n".format(
-                            clause_counter, Clause.clause_to_string(resolvent) if resolvent else "NIL", n1, n2)
-                        clause_to_number[resolvent] = clause_counter
-                        clause_counter += 1
-                        sos_new.add(resolvent)
-                    if not resolvent:
-                        return tuple([True, steps])
+                x, steps = Resolution.__help_fun(c1, c2, sos_new, sos_stage, clauses, clause_to_number, steps)
+                if x:
+                    return [x, steps]
             if not sos_new:
-                if not clauses:
-                    return tuple([False, steps])
-                else:
-                    clauses, sos_new = set(), clauses
+                # if not clauses:
+                return tuple([False, steps])
+                # else:
+                #     clauses, sos_new = set(), clauses
             sos.update(sos_stage)
             sos_stage, sos_new = sos_new, set()
+
+    @staticmethod
+    def __help_fun(c1, c2, sos_new, sos_stage, clauses, clause_to_number, steps):
+        # TODO refactor
+        if c1 == c2:
+            return [False, steps]
+        for resolvent in Clause.pl_resolve(c1, c2):
+            if resolvent and Clause.cnf_tautology(resolvent):
+                continue
+            if Clause.simplify_sets_by_clause_for_subsets(resolvent, sos_new, sos_stage, clauses):
+                break
+            if resolvent not in clause_to_number:
+                n1 = clause_to_number[c1]
+                n2 = clause_to_number[c2]
+                n1, n2 = (n2, n1) if (n1 > n2) else (n1, n2)
+                steps += "{}. {} ({}, {})\n".format(
+                    Resolution.clause_counter, Clause.clause_to_string(resolvent) if resolvent else "NIL", n1, n2)
+                clause_to_number[resolvent] = Resolution.clause_counter
+                Resolution.clause_counter += 1
+                sos_new.add(resolvent)
+            if not resolvent:
+                return tuple([True, steps])
+        return [False, steps]
