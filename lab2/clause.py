@@ -2,7 +2,6 @@ from typing import Set, List
 
 
 class Clause:
-
     @staticmethod
     def parse_to_clauses(string: str) -> List:
         return [frozenset([x.strip() for x in string.lower().split(" v ")])]
@@ -24,6 +23,28 @@ class Clause:
                 resolvent.remove(x)
                 resolvent.remove(x_neg)
                 yield frozenset(resolvent)  # TODO how to freeze set directly
+
+    @staticmethod
+    def equalityOperator(left_cnf, right_cnf):
+        left = Clause.disjunctionOperator(Clause.cnf_negated(left_cnf), right_cnf)
+        right = Clause.disjunctionOperator(left_cnf, Clause.cnf_negated(right_cnf))
+        return Clause.conjunctionOperator(left, right)
+
+    @staticmethod
+    def conjunctionOperator(left_cnf, right_cnf):
+        return left_cnf.union(right_cnf)
+
+    @staticmethod
+    def disjunctionOperator(left_cnf, right_cnf):
+        result = [set()]
+        for x in left_cnf:
+            for y in right_cnf:
+                result.append(frozenset(set(x.copy()).union(y.copy())))
+        return set([frozenset(x) for x in result])
+
+    @staticmethod
+    def implicationOperator(left_cnf, right_cnf):
+        return Clause.disjunctionOperator(Clause.cnf_negated(left_cnf), right_cnf)
 
     @staticmethod
     def cnf_negated(clauses: Set) -> Set:
@@ -69,6 +90,10 @@ class Clause:
     @staticmethod
     def clause_to_string(clause: Set) -> str:
         return " v ".join(clause)
+
+    @staticmethod
+    def clauses_to_string(clauses: Set) -> str:
+        return " & ".join([ "(" + x + ")" if (len(x) > 1) else x for x in [Clause.clause_to_string(x) for x in clauses]])
 
     @staticmethod
     def simplify_within_set_for_subsets(clauses_set) -> None:
