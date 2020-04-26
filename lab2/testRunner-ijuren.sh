@@ -23,6 +23,10 @@ fi
 
 
 tasksToExecute=(
+				'cooking_test cooking_examples/chicken_alfredo.txt cooking_examples/chicken_alfredo_input.txt'
+				'cooking_test cooking_examples/chicken_alfredo_nomilk.txt cooking_examples/chicken_alfredo_nomilk_input.txt'
+				'cooking_test cooking_examples/chicken_broccoli_alfredo_big.txt cooking_examples/chicken_broccoli_alfredo_big_input.txt'
+				'cooking_test cooking_examples/coffee.txt cooking_examples/coffee_input.txt'
 				'resolution resolution_examples/custom_1.txt' 
 				'resolution resolution_examples/custom_2.txt' 
 				'resolution resolution_examples/custom_3.txt' 
@@ -46,12 +50,12 @@ tasksToExecute=(
 				'resolution resolution_examples/small_example_4.txt'
 				'resolution resolution_examples/coffe_or_tea.txt'
 				'resolution resolution_examples/coffe_or_tea_nopowder.txt'
-				'cooking_test cooking_examples/chicken_alfredo.txt cooking_examples/chicken_alfredo_input.txt'
-				'cooking_test cooking_examples/chicken_alfredo_nomilk.txt cooking_examples/chicken_alfredo_nomilk_input.txt'
-				'cooking_test cooking_examples/chicken_broccoli_alfredo_big.txt cooking_examples/chicken_broccoli_alfredo_big_input.txt'
-				'cooking_test cooking_examples/coffee.txt cooking_examples/coffee_input.txt'
 				)
 expectedOutput=(
+				'./cooking_examples/output/chicken_alfredo.txt'
+				'./cooking_examples/output/chicken_alfredo_nomilk.txt'
+				'./cooking_examples/output/chicken_broccoli_alfredo_big.txt'
+				'./cooking_examples/output/coffee.txt'
 				'./resolution_examples/output/custom_1.txt'
 				'./resolution_examples/output/custom_2.txt'
 				'./resolution_examples/output/custom_3.txt'
@@ -75,10 +79,6 @@ expectedOutput=(
 				'./resolution_examples/output/small_example_4.txt'
 				'./resolution_examples/output/coffe_or_tea.txt'
 				'./resolution_examples/output/coffe_or_tea_nopowder.txt'
-				'./cooking_examples/output/chicken_alfredo.txt'
-				'./cooking_examples/output/chicken_alfredo_nomilk.txt'
-				'./cooking_examples/output/chicken_broccoli_alfredo_big.txt'
-				'./cooking_examples/output/coffee.txt'
 				)
 tempOutput='temp_output.txt'
 

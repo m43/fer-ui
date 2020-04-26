@@ -42,11 +42,11 @@ class CookingAgent:
 
     def query(self, clauses: Set) -> str:
         (proved, steps) = Resolution.check_deduction(self._knowledge, clauses, debug=self._debug)
-        print(steps)
+        return steps
 
     def executeCommand(self, command):
         if command[1] == "?":
-            self.query(command[0])
+            print(self.query(command[0]))
         elif command[1] == "-":
             removed = self.remove_from_knowledge(command[0])
             if self._debug:
@@ -70,10 +70,11 @@ class CookingAgent:
 
     def interactive(self):
         while True:
-            line = input(">>> ")
-            command = self.parseCommand(line)
-
-            if command[1] == "exit":
-                return
-
-            self.executeCommand(command)
+            line = input(">>> ").lower()
+            try:
+                command = self.parseCommand(line)
+                if command[1] == "exit":
+                    return
+                self.executeCommand(command)
+            except ValueError:
+                print("Invalid command format")

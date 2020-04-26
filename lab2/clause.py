@@ -25,11 +25,38 @@ class Clause:
                 yield frozenset(resolvent)  # TODO how to freeze set directly
 
     @staticmethod
-    def get_negated_clause(clause: Set) -> Set:
-        negated = set()
-        for x in clause:
-            negated.add(frozenset([Clause.get_negated_literal(x)]))
-        return negated
+    def cnf_negated(clauses: Set) -> Set:
+        """
+        Returns the set of clauses that are the result of negating this CNF set.
+
+        This is how it does the trick:
+        a v b
+        ~c
+        d v f
+
+        negated(^) --> (~a & ~b) v (c) v (~d & ~f)
+          --> {}
+          --> {{~a}, {~b}}
+          --> {{~a,c}, {~b,c}}
+          --> {{~a,c,~d}, {~b,c,~d}, {~a,c,~f}, {~b,c,~f}}
+
+        :param clauses: the clauses in CNF format
+        :return: the negated clauses in CNF format
+        """
+        negated = [set()]
+        for clause in clauses:
+            next_negated = []
+            negated_clause = [Clause.get_negated_literal(x) for x in clause]
+            for x in negated_clause:
+                for y in negated:
+                    current = y.copy()
+                    current.add(x)
+                    next_negated.append(current)
+
+            negated = next_negated
+
+        negated_frozen = set([frozenset(x) for x in negated])
+        return negated_frozen
 
     @staticmethod
     def get_negated_literal(literal: str) -> str:

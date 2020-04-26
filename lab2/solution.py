@@ -7,12 +7,12 @@ from cooking_agent import CookingAgent
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:
-        print("np")
-        # all_facts_list = Loader.load_facts("./resolution_examples/chicken_alfredo.txt")
-        # last_fact = all_facts_list.pop()  # last fact is the goal
-        # print(Resolution.check_deduction(all_facts_list, last_fact, debug=True)[1])
-        # ca = CookingAgent(Loader.load_facts("testeri-ijuren/cooking_examples/chicken_alfredo.txt"), False)
-        # ca.executeCommands(Loader.load_commands("testeri-ijuren/cooking_examples/chicken_alfredo_input.txt"))
+        all_facts_list = Loader.load_facts("./resolution_examples/chicken_broccoli_alfredo_big.txt")
+        last_fact = all_facts_list.pop()  # last fact is the goal
+        print(Resolution.check_deduction(all_facts_list, last_fact, debug=True)[1])
+        # ca = CookingAgent(set(Loader.load_facts("cooking_examples/chicken_alfredo.txt")), False)
+        # ca.interactive()
+        # ca.executeCommands(Loader.load_commands("cooking_examples/chicken_alfredo_input.txt"))
     elif sys.argv[1] == "resolution":
         all_facts_list = Loader.load_facts(sys.argv[2])
         last_fact = all_facts_list.pop()  # last fact is the goal
