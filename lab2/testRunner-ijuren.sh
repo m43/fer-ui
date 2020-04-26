@@ -1,8 +1,39 @@
 #!/bin/bash
 
 IFS=""
-executingCommand='java -cp C:/Users/Juren/IdeaProjects/AI/lab2ui/target/classes ui.Solution '
+
+javaCommand="java -cp ./target/classes ui.Solution "
+pythonCommand="python solution.py "
+cppCommand="make && ./solution resolution resolution_examples/small_example.txt "
+
+
+if [ $1 == 'java' ]
+then
+	executingCommand=$javaCommand
+elif [ $1 == 'python' ]
+then
+	executingCommand=$pythonCommand
+elif [ $1 == 'cpp' ]
+then
+	executingCommand=$cppCommand
+else
+	echo krivi argument:[java/python/cpp]
+	exit
+fi
+
+
 tasksToExecute=(
+				'resolution resolution_examples/custom_1.txt' 
+				'resolution resolution_examples/custom_2.txt' 
+				'resolution resolution_examples/custom_3.txt' 
+				'resolution resolution_examples/custom_4.txt' 
+				'resolution resolution_examples/custom_5.txt' 
+				'resolution resolution_examples/custom_6.txt' 
+				'resolution resolution_examples/custom_7.txt' 
+				'resolution resolution_examples/custom_8.txt' 
+				'resolution resolution_examples/custom_9.txt' 
+				'resolution resolution_examples/custom_10.txt' 
+				'resolution resolution_examples/custom_11.txt' 
 				'resolution resolution_examples/ai.txt' 
 				'resolution resolution_examples/chicken_alfredo.txt' 
 				'resolution resolution_examples/chicken_alfredo_nomilk.txt' 
@@ -21,6 +52,17 @@ tasksToExecute=(
 				'cooking_test cooking_examples/coffee.txt cooking_examples/coffee_input.txt'
 				)
 expectedOutput=(
+				'./resolution_examples/output/custom_1.txt'
+				'./resolution_examples/output/custom_2.txt'
+				'./resolution_examples/output/custom_3.txt'
+				'./resolution_examples/output/custom_4.txt'
+				'./resolution_examples/output/custom_5.txt'
+				'./resolution_examples/output/custom_6.txt'
+				'./resolution_examples/output/custom_7.txt'
+				'./resolution_examples/output/custom_8.txt'
+				'./resolution_examples/output/custom_9.txt'
+				'./resolution_examples/output/custom_10.txt'
+				'./resolution_examples/output/custom_11.txt'
 				'./resolution_examples/output/ai.txt'
 				'./resolution_examples/output/chicken_alfredo.txt'
 				'./resolution_examples/output/chicken_alfredo_nomilk.txt'
@@ -49,8 +91,11 @@ do
 	touch $tempOutput
 	line=$executingCommand$taskToExecute
 	eval $line > $tempOutput
-	
-	if [ $(diff -w -B "$tempOutput" "${expectedOutput[$i]}") ] 
+
+	first=`awk '{ print $NF }' $tempOutput`
+	second=`awk '{ print $NF }' ${expectedOutput[$i]}`
+#	if [ $(diff -w -B "$tempOutput" "${expectedOutput[$i]}") ]
+	if [[ "$first" != "$second" ]];
 	then
 		echo
 		failed=$(($failed+1))
@@ -74,7 +119,7 @@ echo
 echo failed: $failed
 echo ok:     $ok
 echo
-echo percentage: $(($ok/($ok+$failed)*100))%
+echo percentage: $(($ok*100/($ok+$failed)))%
 
 
 
