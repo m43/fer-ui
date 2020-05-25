@@ -128,7 +128,7 @@ class Node:
             for line in file.read().splitlines():
                 if line.startswith("#") or not line.strip():
                     continue
-                cnf_format = Node(line).evaluate()
+                cnf_format = Node(line.lower()).evaluate()
                 output.append(Clause.clauses_to_string(cnf_format))
         return "\n".join(output)
 

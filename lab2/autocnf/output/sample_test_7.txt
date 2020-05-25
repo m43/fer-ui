@@ -1,0 +1,1 @@
+(a v ~c v b) & (~a v ~c v ~b) & (a v ~d v b) & (~a v ~d v ~b)
