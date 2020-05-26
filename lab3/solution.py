@@ -24,10 +24,10 @@ class Configuration:
     def __init__(self, dict):
         self.mode = dict.get(self.KEYWORD_MODE)
         self.model = dict.get(self.KEYWORD_MODEL)
-        self.max_depth = dict.get(self.KEYWORD_MAX_DEPTH, self.DEFAULT_MAX_DEPTH)
-        self.num_trees = dict.get(self.KEYWORD_NUMBER_OF_TREES, self.DEFAULT_NUMBER_OF_TREES)
-        self.feature_ratio = dict.get(self.KEYWORD_FEATURE_RATIO, self.DEFAULT_FEATURE_RATIO)
-        self.example_ratio = dict.get(self.KEYWORD_EXAMPLE_RATIO, self.DEFAULT_EXAMPLE_RATIO)
+        self.max_depth = int(dict.get(self.KEYWORD_MAX_DEPTH, self.DEFAULT_MAX_DEPTH))
+        self.num_trees = int(dict.get(self.KEYWORD_NUMBER_OF_TREES, self.DEFAULT_NUMBER_OF_TREES))
+        self.feature_ratio = float(dict.get(self.KEYWORD_FEATURE_RATIO, self.DEFAULT_FEATURE_RATIO))
+        self.example_ratio = float(dict.get(self.KEYWORD_EXAMPLE_RATIO, self.DEFAULT_EXAMPLE_RATIO))
 
     @staticmethod
     def from_path(path):
@@ -120,13 +120,24 @@ class ID3(Model):
                 recursive(depth + 1, child) for key, child in node.x_to_child_node.items()]
             if isinstance(self.root, CompositeNode):
                 recursive(0, self.root)
+            nodes.sort(key=lambda x: (-x[0], x[1]), reverse=True)
             print(", ".join(["{}:{}".format(depth, x) for depth, x in nodes]))
 
     def prediction(self, dataset):
-        result = [self.root.evaluate(row) for row in dataset.rows]
+        expected = dataset.extract_last_column(dataset.rows)
+        prediction = [self.root.evaluate(row) for row in dataset.rows]
+        confusion_matrix = {}
+        correct = 0
+        for e, p in zip(expected, prediction):
+            if e == p:
+                correct += 1
+            confusion_matrix[e, p] = confusion_matrix.get((e, p), 0) + 1
         if config.is_test_mode():
-            print(" ".join(result))
-        return result
+            print(" ".join(prediction))
+        print(correct / len(expected))
+        for clazz_e in sorted(dataset.classes):
+            print(" ".join([str(confusion_matrix.get((clazz_e, clazz_p), 0)) for clazz_p in sorted(dataset.classes)]))
+        return prediction
 
     def _id3(self, dataset, current_rows, unprocessed_features, depth=0):
         # if there are no rows left, lets return the class that is most likely in the dataset
@@ -135,8 +146,8 @@ class ID3(Model):
 
         # is the leaf condition reached?
         y_sorted_counts = sorted(Counter(Dataset.extract_last_column(current_rows)).items(),
-                                 key=lambda x: (-x[1], x[0]))
-        if not unprocessed_features or len(y_sorted_counts) == 1:
+                                 key=lambda t: (-t[1], t[0]))
+        if not unprocessed_features or len(y_sorted_counts) == 1 or depth == config.max_depth:
             return LeafNode(y_sorted_counts[0][0])
 
         # Lets pick the next feature and remove it from unprocessed features
