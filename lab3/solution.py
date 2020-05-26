@@ -1,9 +1,10 @@
-import sys
 import csv
+import math
+import random
+import sys
 from abc import ABC, abstractmethod
 from collections import Counter
 from configparser import ConfigParser
-import math
 
 
 class Configuration:
@@ -67,10 +68,15 @@ class Dataset:
             return []
         return [row[len(rows[0]) - 1] for row in rows]
 
+    def extract_sample(self, column_indices, row_indices):
+        header = [self.header[idx] for idx in column_indices]
+        rows = [[self.rows[row_idx][col_idx] for col_idx in column_indices] for row_idx in row_indices]
+        return Dataset(header, rows)
+
 
 class Model(ABC):
     @abstractmethod
-    def __init__(self, config):
+    def __init__(self, config, silent=False):
         pass
 
     @abstractmethod
@@ -81,10 +87,24 @@ class Model(ABC):
     def prediction(self, dataset):
         pass
 
+    @staticmethod
+    def print_confusion_matrix(expected, predicted, classes):
+        confusion_matrix = {}
+        correct = 0
+        for e, p in zip(expected, predicted):
+            if e == p:
+                correct += 1
+            confusion_matrix[e, p] = confusion_matrix.get((e, p), 0) + 1
+        print(" ".join(predicted))
+        print(correct / len(expected))
+        for clazz_e in sorted(classes):
+            print(
+                " ".join([str(confusion_matrix.get((clazz_e, clazz_p), 0)) for clazz_p in sorted(classes)]))
+
 
 class Node(ABC):
     @abstractmethod
-    def evaluate(self, row):
+    def evaluate(self, x_to_index, row):
         pass
 
 
@@ -92,26 +112,28 @@ class LeafNode(Node):
     def __init__(self, y):
         self.y = y
 
-    def evaluate(self, row):
+    def evaluate(self, x_to_index, row):
         return self.y
 
 
 class CompositeNode(Node):
-    def __init__(self, x, x_idx, x_to_child_node):
+    def __init__(self, x, x_to_child_node, fallback):
         self.x = x
-        self.x_idx = x_idx
         self.x_to_child_node = x_to_child_node
+        self.fallback = fallback
 
-    def evaluate(self, row):
-        return self.x_to_child_node[row[self.x_idx]].evaluate(row)
+    def evaluate(self, x_to_index, row):
+        return self.x_to_child_node.get(row[x_to_index[self.x]], self.fallback).evaluate(x_to_index, row)
 
 
 class ID3(Model):
-    def __init__(self, config):
+    def __init__(self, config, silent=False):
         super().__init__(config)
         self.config = config
+        self.silent = silent
 
     def fit(self, dataset):
+        self.__most_likely = LeafNode(dataset.most_frequent_classes[0][0])
         self.root = self._id3(dataset, dataset.rows, dataset.header[:-1])
         if config.is_test_mode():
             nodes = []
@@ -121,28 +143,20 @@ class ID3(Model):
             if isinstance(self.root, CompositeNode):
                 recursive(0, self.root)
             nodes.sort(key=lambda x: (-x[0], x[1]), reverse=True)
-            print(", ".join(["{}:{}".format(depth, x) for depth, x in nodes]))
+            if not self.silent and config.is_test_mode():
+                print(", ".join(["{}:{}".format(depth, x) for depth, x in nodes]))
 
     def prediction(self, dataset):
         expected = dataset.extract_last_column(dataset.rows)
-        prediction = [self.root.evaluate(row) for row in dataset.rows]
-        confusion_matrix = {}
-        correct = 0
-        for e, p in zip(expected, prediction):
-            if e == p:
-                correct += 1
-            confusion_matrix[e, p] = confusion_matrix.get((e, p), 0) + 1
-        if config.is_test_mode():
-            print(" ".join(prediction))
-        print(correct / len(expected))
-        for clazz_e in sorted(dataset.classes):
-            print(" ".join([str(confusion_matrix.get((clazz_e, clazz_p), 0)) for clazz_p in sorted(dataset.classes)]))
-        return prediction
+        predicted = [self.root.evaluate(dataset.header_to_index, row) for row in dataset.rows]
+        if not self.silent and config.is_test_mode():
+            self.print_confusion_matrix(expected, predicted, dataset.classes)
+        return predicted
 
     def _id3(self, dataset, current_rows, unprocessed_features, depth=0):
         # if there are no rows left, lets return the class that is most likely in the dataset
         if not current_rows:
-            return LeafNode(dataset.most_frequent_classes[0][0])
+            return self.__most_likely
 
         # is the leaf condition reached?
         y_sorted_counts = sorted(Counter(Dataset.extract_last_column(current_rows)).items(),
@@ -158,7 +172,8 @@ class ID3(Model):
         # Creating and returning the child node as a CompositeNode
         x_to_child_node = {key: self._id3(dataset, group, new_unprocessed_features, depth + 1)
                            for key, group in group_rows(current_rows, x_idx).items()}
-        return CompositeNode(x, x_idx, x_to_child_node)
+
+        return CompositeNode(x, x_to_child_node, LeafNode(y_sorted_counts[0][0]))  # TODO or is it `self.__most_likely`?
 
     def __select_feature_by_information_gain(self, dataset, current_rows, unprocessed_features):
         y_idx = dataset.header_to_index[dataset.header[-1]]
@@ -171,21 +186,13 @@ class ID3(Model):
             # "sunny":[row1 row2 row4] "cloudy":[row3, row5] ..
             groups = group_rows(current_rows, idx)
 
-            # (n, y1:1 y2:2 y3:10 ..)
             entropy_after_x = sum(
                 [(len(group) * self.rows_entropy(group, y_idx)) / len(current_rows) for group in groups.values()])
-
-            # entropy = 0
-            # for n, counts in group_y_counts:
-            #     for count in counts.items():
-            #         p = count[1] / n
-            #         entropy -= p * math.log2(p)
-            # information_gains.append((x, idx, entropy_before - entropy))
 
             information_gains.append((x, idx, entropy_before - entropy_after_x))
 
         information_gains.sort(key=lambda t: (-t[2], t[1]))
-        if config.is_verbose_mode():
+        if not self.silent and config.is_verbose_mode():
             print(information_gains)
 
         return information_gains[0]
@@ -215,12 +222,58 @@ def count_grouped_rows(array, column_idx) -> dict:
     return result
 
 
+class RandomForrest(Model):
+    def __init__(self, config, silent=False):
+        super().__init__(config, silent)
+        self.config = config
+        self.silent = silent
+        self.trees = [ID3(config, True) for i in range(config.num_trees)]
+
+    def fit(self, dataset):
+        instance_subset = round(config.example_ratio * len(dataset.rows))
+        feature_subset = round(config.feature_ratio * (len(dataset.header) - 1))
+        for tree in self.trees:
+            tree_rows = random.sample(range(len(dataset.rows)), instance_subset)
+            tree_features = random.sample(range(len(dataset.header) - 1), feature_subset)
+            # for tree, tree_features, tree_rows in zip(self.trees, [[0, 1],
+            #                                                        [1, 3],
+            #                                                        [0, 1],
+            #                                                        [1, 2],
+            #                                                        [1, 2]],
+            #                                           [[8, 2, 10, 13, 6, 13, 7],
+            #                                            [11, 12, 5, 2, 2, 6, 9],
+            #                                            [13, 8, 10, 11, 6, 11, 4],
+            #                                            [11, 9, 1, 13, 3, 13, 0],
+            #                                            [3, 7, 8, 3, 0, 11, 8]]):
+            tree_dataset = dataset.extract_sample(tree_features + [-1], tree_rows)
+            tree.fit(tree_dataset)
+            if not self.silent and self.config.is_test_mode():
+                print(" ".join([dataset.header[idx] for idx in tree_features]))
+                print(" ".join([str(row) for row in tree_rows]))
+
+    def prediction(self, dataset):
+        expected = dataset.extract_last_column(dataset.rows)
+        predicted = []
+        tree_predictions = [tree.prediction(dataset) for tree in self.trees]
+        tree_predictions_transposed = [[tree_predictions[i][j] for i in range(len(tree_predictions))] for j in
+                                       range(len(tree_predictions[0]))]
+        for i in range(len(dataset.rows)):
+            predicted.append(sorted(Counter(tree_predictions_transposed[i]).items(), key=lambda t: (-t[1], t[0]))[0][0])
+
+        if not self.silent:
+            self.print_confusion_matrix(expected, predicted, dataset.classes)
+
+        return predicted
+
+
 class ModelFactory:
     # TODO use dynamic binding to accomplish this
     @staticmethod
     def get(name):
         if name.lower() == "id3":
             return ID3
+        if name.lower() == "rf":
+            return RandomForrest
         else:
             raise ValueError("No")
 
