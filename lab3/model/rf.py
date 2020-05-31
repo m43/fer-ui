@@ -19,7 +19,7 @@ class RandomForrest(Model):
         # r = ...
         # for tree, tree_features, tree_rows in zip(self.trees, f, r):
         for tree in self.trees:
-            tree_rows = random.sample(range(len(dataset.rows)), instance_subset)
+            tree_rows = random.choices(range(len(dataset.rows)), k=instance_subset)
             tree_features = random.sample(range(len(dataset.header) - 1), feature_subset)
             tree_dataset = dataset.extract_sample(tree_features + [-1], tree_rows)
             tree.fit(tree_dataset)
